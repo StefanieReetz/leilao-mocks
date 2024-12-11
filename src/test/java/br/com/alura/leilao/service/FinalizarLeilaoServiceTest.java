@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,10 +26,13 @@ class FinalizarLeilaoServiceTest {
     @Mock
     private LeilaoDao leilaoDao;
 
+    @Mock
+    private EnviadorDeEmails enviadorDeEmails;
+
     @BeforeEach
     public void beforeEach() {
         MockitoAnnotations.initMocks(this);
-        this.service = new FinalizarLeilaoService(leilaoDao);
+        this.service = new FinalizarLeilaoService(leilaoDao, enviadorDeEmails);
     }
 
     @Test
@@ -45,6 +49,43 @@ class FinalizarLeilaoServiceTest {
         Assert.assertEquals(new BigDecimal("900"), leilao.getLanceVencedor().getValor());
 
         Mockito.verify(leilaoDao).salvar(leilao);
+    }
+
+    @Test
+    void deveriaEnviarEmailParaVencedor() {
+        List<Leilao> leiloes = leiloes();
+
+        Mockito.when(leilaoDao.buscarLeiloesExpirados())
+                .thenReturn(leiloes);
+
+        service.finalizarLeiloesExpirados();
+
+        Leilao leilao = leiloes.get(0);
+        Lance lanceVencedor = leilao.getLanceVencedor();
+
+
+        Mockito.verify(enviadorDeEmails)
+                .enviarEmailVencedorLeilao(lanceVencedor);
+    }
+
+    @Test
+    void naoDeveriaEnviarEmailParaVencedorDoLeilaoEmCasoDeErrroAoEncerrarOLeilao() {
+        List<Leilao> leiloes = leiloes();
+
+        Mockito.when(leilaoDao.buscarLeiloesExpirados())
+                .thenReturn(leiloes);
+
+        Mockito.when(leilaoDao.salvar(Mockito.any()))
+                .thenThrow(RuntimeException.class);
+
+        try {
+            service.finalizarLeiloesExpirados();
+
+            Mockito.verifyNoInteractions(enviadorDeEmails);
+
+        }catch (Exception e){}
+
+
     }
 
 

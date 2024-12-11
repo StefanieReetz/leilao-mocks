@@ -13,12 +13,13 @@ import br.com.alura.leilao.model.Leilao;
 @Service
 public class FinalizarLeilaoService {
 
-
+	private EnviadorDeEmails enviadorDeEmails;
 	private LeilaoDao leiloes;
 
 	@Autowired
-	public FinalizarLeilaoService(LeilaoDao leiloes) {
+	public FinalizarLeilaoService(LeilaoDao leiloes, EnviadorDeEmails enviadorDeEmails) {
 		this.leiloes = leiloes;
+		this.enviadorDeEmails = enviadorDeEmails;
 	}
 	public void finalizarLeiloesExpirados() {
 		List<Leilao> expirados = leiloes.buscarLeiloesExpirados();
@@ -27,6 +28,8 @@ public class FinalizarLeilaoService {
 			leilao.setLanceVencedor(maiorLance);
 			leilao.fechar();
 			leiloes.salvar(leilao);
+
+			enviadorDeEmails.enviarEmailVencedorLeilao(maiorLance);
 		});
 	}
 
